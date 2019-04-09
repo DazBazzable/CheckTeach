@@ -5,243 +5,260 @@
 #       we don't continue on any branch that has already produced an inconsistent solution
 #       we stop and return a complete solution once one has been found
 
-import Sudoku_IO
+# COMMENT FROM SUBMITTER
+# I had major problems with the code and unfortunately ran out of time. Really unfair as I emailed requesting lecturer and
+# tutor for help, but received no response. I guess the problem with doing this type of paper by distance.
+
+# fundamentally I had a minor issue/bug that actually had been jeopardising my whole program. Frustratingly I only identified this
+# on evening of submission. This actually screwed over the implementation of pruning
+
+# Please note that the current pruning aspect works for easy projects. This is because of problem with a range that was coded earlier
+# Please comment out the pruning section to test recursion backtracking on its own.
+
 import pygame
-import Snapshot
-import Cell
+
+import Sudoku_IO
 
 
 def solve(snapshot, screen):
-    # display current snapshot
-    pygame.time.delay(200) #originally 20
-    Sudoku_IO.displayPuzzle(snapshot, screen)
-    pygame.display.flip()
-
-    #FOR DEBUGGING PURPOSES
-    print("***********")
-    print("SOLVE CYCLE")
-    print("***********")
-
-    #PATHWAY A: BASE CASE
-    ##BASE CASE IS SOLVED!?
-    # if current snapshot is complete ... return a value
-    if (isComplete(snapshot) == True): # and (checkConsistency(snapshot) == True):
-        print("Done Basecase")
-        pygame.time.delay(5000) #allow a pause
-        return
-
     # if current snapshot not complete ...
     # for each possible value for an empty cell
     #    clone current snapshot and update it,
     #    if new snapshot is consistent, perform recursive call
     # return a value
 
-    #PATHWAY B: SOLVE IT
+    # display current snapshot
+    pygame.time.delay(20)  # originally 20
+    Sudoku_IO.displayPuzzle(snapshot, screen)
+    pygame.display.flip()
+
+    # FOR DEBUGGING PURPOSES
+    # print("***********")
+    # print("SOLVE CYCLE")
+    # print("***********")
+
+    # PATHWAY A: BASE CASE
+    ##BASE CASE IS SOLVED!?
+    # if current snapshot is complete ... return a value
+    if (isComplete(snapshot) == True) and (checkConsistency(snapshot) == True):
+        print("Solved")
+        pygame.time.delay(5000)  # allow a pause
+        return snapshot
+
+
+    # PATHWAY B: SOLVE IT
     else:
-        #STEP 1 :: SAVE CURRENT STATE (original), ALSO MAKE COPY OF WORKING STATE
-        #--- SAVE THE CURRENT STATE
-        original_snapshot = snapshot.clone()
+        # STEP 1 :: SAVE CURRENT STATE (original), ALSO MAKE COPY OF WORKING STATE
+        # --- SAVE THE CURRENT STATE
+        # original_snapshot = snapshot.clone()
 
-        #--- CREATE A WORKING STATE (new_snapshot)
-        new_snapshot = snapshot.clone()
+        # --- CREATE A WORKING STATE (new_snapshot)
+        new_snapshot = snapshot
 
-        #-- METHOD 3 --#
-        #--- MAIN PATHWAY -- USE THE WORKING STATE TO SOLVE --
+        # -- METHOD 3 --#
+        # --- MAIN PATHWAY -- USE THE WORKING STATE TO SOLVE --
         # This pathway uses the *Unsolved* list that has been generated as the list of items to solve
-        for i in range(0, len(new_snapshot.unsolvedCells())-1): #in snapshot.unsolvedCells():
-            for j in range(0,9):
 
-                item = new_snapshot.unsolvedCells()[i]
-                column = item.getCol()
-                row = item.getRow()
+        # use dictionaries to store length for different values
+        loggedUnsolvedCellsDict = {}
 
-                if row == j:
+        ########################################################################################################################
+        # -------RECURSIVE BACKTRACKING BRUTEFORCE
 
-                #STEP 2 :: TRIPLE CHECK :: GENERATE ROW, COLUMN AND BOX VALUES FOR THE UNSOLVED CELL IN QUESTION
-                    rowValues = [cellRow.getVal() for cellRow in new_snapshot.cellsByRow(row) if cellRow.getVal() != 0]
-                    columnValues = [cellCol.getVal() for cellCol in new_snapshot.cellsByCol(column) if cellCol.getVal() != 0]
-                    boxValues = [cellBox.getVal() for cellBox in new_snapshot.cellsByBlock(row, column) if cellBox.getVal() != 0]
+        def recursiveBacktrackingBruteForce():
+            print("Makes it to RECURSION BACKTRACKING BRUTEFORCE")
+            for i in range(0, len(new_snapshot.unsolvedCells())):
+                if (len(new_snapshot.unsolvedCells()) != 0):
+                    item = new_snapshot.unsolvedCells()[i]
 
-                    #STEP 3 :: USE THE ABOVE DATA TO IDENTIFY THE POSSIBLE VALUES FOR THE UNSOLVED CELL IN QUESTION
-                    takenValues = rowValues + columnValues + boxValues
-                    possibleValues = [possVal for possVal in range(0,9) if possVal not in takenValues]
-                    possibleValues.remove(0)
+                    # STEP 2 :: TRIPLE CHECK :: GENERATE ROW, COLUMN AND BOX VALUES FOR THE UNSOLVED CELL IN QUESTION
+                    valuesTaken = ([y.getVal() for y in new_snapshot.cellsByRow(item.getRow())] +
+                                   [y.getVal() for y in new_snapshot.cellsByCol(item.getCol())] +
+                                   [y.getVal() for y in new_snapshot.cellsByBlock(item.getRow(), item.getCol())])
+                    # STEP 3 :: USE THE ABOVE DATA TO IDENTIFY THE POSSIBLE VALUES FOR THE UNSOLVED CELL IN QUESTION
+                    # eg. working out the legal values
+                    possibleValues = [y for y in range(1, 10) if y not in valuesTaken]
 
-                    print(takenValues, possibleValues)
-                    print(len(possibleValues)) #Debugging
-
-                    #STEP 4 :: Concept is to :: go through all possibilities and call the function again and again
-                    #Read field into state (replace 0 with a set of possible values)
-                    for value in possibleValues:
-                        print(value)
-                        #new_snapshot = snapshot.clone()
-                        #new_snapshot = snapshot.clone()
-
-                        #STEP 5 :: BACKTRACK TO PREVIOUS STATE?
-
-                        #is valueValid?
-                        #--- Yes -> then do this
-                        #STEP 5a :: UPDATE RESULT
-
-                        if len(possibleValues)>0:
-                            item.setVal(value)
+                    # BRUTE FORCE RECURSION PART
+                    for j in possibleValues:
+                        if i > 0:
+                            if new_snapshot.unsolvedCells()[i - 1] is not 0:
+                                item.setVal(j)
+                                break
+                            else:
+                                item.setVal(0)
+                        else:
+                            item.setVal(j)
                             solve(new_snapshot.clone(), screen)
 
-                        #No -> then below backtracking
+                    # Backtrack
+                    item.setVal(0)
 
-                        #STEP 5b :: BACKTRACK TO PREVIOUS STATE?
+        #######################################################################################################################
+        # -------START WITH PRUNING
+        #######################################################################################################################
+        def generatePossibleValues():
+            for i in range(0, len(new_snapshot.unsolvedCells())):
+                if (len(new_snapshot.unsolvedCells()) != 0):
+                    item = new_snapshot.unsolvedCells()[i]
 
-                        #not possible then return to previous?
-                        #NOT WORKING AT PRESENT - not sure if I need to put this elsewhere, or use alternate instruction
-                        #such as reference to previous cell that I have seen in other examples
-                        else:
-                            item.setVal(0)
-                            solve(original_snapshot, screen)
+                    column = item.getCol()
+                    row = item.getRow()
+
+                    # STEP 2 :: TRIPLE CHECK :: GENERATE ROW, COLUMN AND BOX VALUES FOR THE UNSOLVED CELL IN QUESTION
+                    valuesTaken = ([y.getVal() for y in new_snapshot.cellsByRow(item.getRow())] +
+                                   [y.getVal() for y in new_snapshot.cellsByCol(item.getCol())] +
+                                   [y.getVal() for y in new_snapshot.cellsByBlock(item.getRow(), item.getCol())])
+                    # STEP 3 :: USE THE ABOVE DATA TO IDENTIFY THE POSSIBLE VALUES FOR THE UNSOLVED CELL IN QUESTION
+                    # eg. working out the legal values
+                    possibleValues = [y for y in range(1, 10) if y not in valuesTaken]
+
+                    # STEP 4 :: Storage of cell coordinates, with possible values
+                    try:
+                        loggedUnsolvedCellsDict[row].append([column, i, possibleValues])
+
+                    except:
+                        loggedUnsolvedCellsDict[row] = [[column, i, possibleValues]]
+
+        def pruneSingletons():
+            # m represents the row number
+            for m in range(0, 9):
+                # go through items in logged unsolved cells for purposes of storing any values (with cell as key)
+                # to the dictionary logging values so can be updated by row at later point in time
+                valueToDelete = 0
+
+                # PRUNING SINGLETONS ##WORKING### NESTED FUNCTION
+                print("CREATING PRUNE LIST")
+                if loggedUnsolvedCellsDict[m] is not None:
+                    for thingy in loggedUnsolvedCellsDict[m]:
+                        if len(thingy[2]) == 1:
+                            for k in thingy[2]:
+                                valueToDelete = k
+                                try:
+                                    unsolvedCellNoToUpdate[m].append([thingy[0], k])
+
+                                except:
+                                    unsolvedCellNoToUpdate[m] = [[thingy[0], k]]
+                            # break
+
+                if loggedUnsolvedCellsDict[m] is not None:
+                    for count, thingy in enumerate(loggedUnsolvedCellsDict[m]):
+                        if valueToDelete in thingy[2]:
+                            try:
+                                thingy[2].remove(valueToDelete)
+                            except:
+                                pass
+
+                # UPDATING CELL WITH PRUNED VALUES
+                print("UPDATE WITH PRUNING")
+
+                # goes through the list of the unsolved cells
+                for count_it, cellToUpdate in enumerate(new_snapshot.unsolvedCells()):
+                    # FIRST PART
+                    # goes through the list of possible values that have been storred
+                    for count, x in enumerate(loggedUnsolvedCellsDict_backup[m]):
+                        if (unsolvedCellNoToUpdate.get(m) is not None):
+                            for n in unsolvedCellNoToUpdate[m]:
+
+                                if (cellToUpdate.getRow() == m) and (cellToUpdate.getCol() == n[0]):
+                                    if (x[0] == n[0]):
+                                        if (new_snapshot.unsolvedCells()) is not None:
+                                            cellToUpdate.setVal(n[1])
+
+                    valuesTaken = [y.getVal() for y in new_snapshot.cellsByRow(cellToUpdate.getRow())] + [y.getVal() for
+                                                                                                          y in
+                                                                                                          new_snapshot.cellsByCol(
+                                                                                                              cellToUpdate.getCol())] + [
+                                      y.getVal() for y in
+                                      new_snapshot.cellsByBlock(cellToUpdate.getRow(), cellToUpdate.getCol())]
+
+                    possValues2 = [i for i in range(1, 10) if i not in valuesTaken]
+
+                    # if count_it is not len(new_snapshot.unsolvedCells()):
+                    try:
+                        if len(possValues2) == 1:
+                            for k in possValues2:
+                                cellToUpdate.setVal(k)
+
+                    except:
+                        break
+
+                solve(new_snapshot.clone(), screen)
+
+        # print("PRUNING")
+        generatePossibleValues()
+
+        # MAKE A BACKUP OF LOGGED UNSOLVED CELLS, REASON IS FOR USE IN FINAL LIST
+        loggedUnsolvedCellsDict_backup = loggedUnsolvedCellsDict
+
+        # Keep a dictionary logging values to update by row
+        unsolvedCellNoToUpdate = {}
+
+        print(loggedUnsolvedCellsDict)
+
+        try:
+            pruneSingletons()
+
+        except:
+            print("SWITCH TO BRUTEFORCE")
+            recursiveBacktrackingBruteForce()
+            # solve(new_snapshot.clone(),screen)
 
 
-                #item.setVal(0)
-                #solve(snapshot, screen)
-        '''
-        ##  PREVIOUS VERSION - Other methods I have coded for later reference ##
-        ##  -- Uses a different approach to where it brute forces -> Works thru individual cells
-        for i in range(0,9):
-            #Possible and existing row values
-            existingRowValue = []
-            possibleRowValues = [1,2,3,4,5,6,7,8,9]
-
-            #TRIPLE CHECK#
-            ##STEP 1##
-            #FOR ROW - Generates the possible values for ROW
-            #This adds valid cell values to a list
-            #The second part keeps removes the valid values for the row
-            for cell_in_row in (Snapshot.snapshot.cellsByRow(snapshot, i)):
-                if (cell_in_row.getVal() != 0):
-                    existingRowValue.append(cell_in_row.getVal())
-
-                    #The second part keeps removes the valid values for the row
-                    #There is probably an easier way to do this
-                    if cell_in_row.getVal() in possibleRowValues:
-                        possibleRowValues.remove(cell_in_row.getVal())
+########################################################################################################################
 
 
-            ##STEP 2##
-            #i is the row number, j therefore can give the column number
-            for cell_in_row in (Snapshot.snapshot.cellsByRow(snapshot, i)):
-                #Possible and existing column values
-                possibleColValues = [1,2,3,4,5,6,7,8,9]
-                existingColumnValue = []
-
-                #Possible and existing block values
-                possibleBlockValues = [1,2,3,4,5,6,7,8,9]
-                existingBlockValue = []
-
-                for cell_in_coll in (Snapshot.snapshot.cellsByCol(snapshot, cell_in_row.getCol())):
-                    #print("Cell coll: " + str(cell_in_coll.getCol()))
-
-                    #if the value is not 0 && not the maincell
-                    if (cell_in_coll.getVal() != 0):
-                    #if((cell_in_coll.getVal() != 0) and not cell_in_coll.getVal): # and (cell_in_coll not in y)
-                        existingColumnValue.append(cell_in_coll.getVal())
-
-                        #The second part keeps removes the valid values for the row
-                        #There is probably an easier way to do this
-                        if (cell_in_coll.getVal() in possibleColValues):
-                            possibleColValues.remove(cell_in_coll.getVal())
-
-                for cell_in_block in (Snapshot.snapshot.cellsByBlock(snapshot, cell_in_row.getRow(),cell_in_row.getCol())):
-                    if (cell_in_block.getVal() != 0):
-                        existingBlockValue.append(cell_in_block.getVal())
-                        if (cell_in_block.getVal() in possibleBlockValues):
-                            possibleBlockValues.remove(cell_in_block.getVal())
-
-                #Once we arrive at a vacant cell
-                #Check if the x possible values are in the y possible values
-                if(len(existingRowValue)>3):
-                    print("existing Row Value: " + str(existingRowValue) + str(len(existingRowValue)))
-                    print("existing Column Value: " + str(existingColumnValue) + str(len(existingColumnValue)))
-                    print("-")
-                    print("possible Row Values available: " + str(possibleRowValues) + str(len(possibleRowValues)))
-                    print("possible Column Value available: " + str(possibleColValues)+ str(len(possibleColValues)))
-                    print("=========================================")
-
-                #print(possibleRowValues.symmetric possibleColValues)
-
-                #valuesToEnter = []
-
-                #setCheck = set(possibleRowValues).intersection(possibleColValues)
-                #print(setCheck)2e1
-                #for item in snapshot.unsolvedCells():
-                    #if item.getRow() == i:
-                        #cell_in_row.setValue(existingRowValue[item])
-                        #solve(snapshot.clone(), screen)
-            
-                
-                Method 1:
-                
-
-                # if(cell_in_row.getVal() == 0):
-                #      #if len(existingRowValue) == 9:
-                #     for item in possibleRowValues:
-                #         if (item in possibleColValues):
-                #             if (item in possibleBlockValues):
-                #                 cell_in_row.setVal(item)
-                #                 solve(snapshot.clone(), screen)
-                #             else:
-                #                 cell_in_row.setVal(0)
-                #
-                        #else:
-                            #solve(snapshot.clone(), screen)
-                            #valuesToEnter.append(item)
-                            #print("Values to Enter: " + str(valuesToEnter))
-                                #if len(existingRowValue) == 9:
-
-                            #solve(snapshot, screen)
-
-            
-                Method 2
-                
-                #go through all possibilities and call the function again and again
-
-                # if(cell_in_row.getVal() == 0):
-                #     for item in possibleRowValues:
-                #         if(item in possibleColValues) and (item not in existingColumnValue):
-                #             cell_in_row.setVal(item)
-                # #
-                #             solve(snapshot.clone(), screen)
-                #         else:
-                #             cell_in_row.setVal(item)
-                #             solve(snapshot, screen)
-
-        #solve(snapshot, screen)
-        '''
-
-# Check whether a snapshot is consistent, i.e. all cell values comply 
-# with the sudoku rules (each number occurs only once in each block, row and column).
-# -- NOTE FROM DB - I am yet to put this method in the main solver function - Currently commented out
 def checkConsistency(snapshot):
-    numbers = [number for number in range(0,9)]
+    '''
+    Check whether a snapshot is consistent, i.e. all cell values comply
+    with the sudoku rules (each number occurs only once in each block, row and column).
+    :param snapshot:
+    :return: true: if the board is consistent with sudoku rules
+    '''
 
-    for row in range(0,9):
-        for col in range(0,9):
-            checkColls = [cellCols.getVal() for cellCols in snapshot.cellsByCol(col) if numbers in cellCols.getVal()]
-            checkRows = [cellRows.getVal() for cellRows in snapshot.cellsByRow(row) if numbers in cellRows.getVal()]
-            checkBlock = [cellBox.getVal() for cellBox in snapshot.cellsByBlock(row,col) if numbers in cellBox.getVal()]
-            checkTotal = checkRows + checkColls + checkBlock
-            if 0 in checkTotal:
-                return False
+    def checkDuplicates(some_list):
+        '''
+        Checks whether there are any duplicates
+        :param some_list:
+        :return:
+        '''
+        setCheck = set(some_list)
+        for each in setCheck:
+            count = some_list.count(each)
+            if count > 1:
+                return 1
             else:
-                return True
+                return 0
 
-# Check whether a puzzle is solved. 
-# return true if the sudoku is solved, false otherwise
-# -- NOTE FROM DB will need to update this code also
+    # Var that keeps a count of any duplicate entries
+    dupes_checker = 0
+
+    for row in range(0, 9):
+        checkRows = [cellRows.getVal() for cellRows in snapshot.cellsByRow(row) if cellRows.getVal() != 0]
+        dupes_checker += checkDuplicates(checkRows)
+    for col in range(0, 9):
+        checkColls = [cellCols.getVal() for cellCols in snapshot.cellsByCol(col) if cellCols.getVal() != 0]
+        dupes_checker += (checkDuplicates(checkColls))
+    for row in range(0, 9, 3):
+        for col in range(0, 9, 3):
+            checkBlock = [cellBox.getVal() for cellBox in snapshot.cellsByBlock(row, col) if cellBox.getVal() != 0]
+            dupes_checker += checkDuplicates(checkBlock)
+
+    if dupes_checker == 0:
+        return True
+    else:
+        return False
+
+
 def isComplete(snapshot):
-    if(snapshot.unsolvedCells() == []):
-        print("DONE DUMBY")
-        pygame.time.delay(1000)
+    '''
+    Check whether a puzzle is solved.
+    # return true if the sudoku is solved, false otherwise
+    :param snapshot:
+    :return: boolean value - is board completed or not?
+    '''
+    if (snapshot.unsolvedCells() == []):
         return True
 
     else:
-        print("Nope")
         return False
-
